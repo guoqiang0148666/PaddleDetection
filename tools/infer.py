@@ -28,6 +28,8 @@ import six
 from PIL import Image
 
 from paddle import fluid
+import paddle
+paddle.enable_static()
 
 from ppdet.core.workspace import load_config, merge_config, create
 
@@ -38,6 +40,7 @@ from ppdet.utils.visualizer import visualize_results
 import ppdet.utils.checkpoint as checkpoint
 
 from ppdet.data.reader import create_reader
+import paddleslim as slim
 
 import logging
 FORMAT = '%(asctime)s-%(levelname)s: %(message)s'
@@ -88,6 +91,8 @@ def get_test_images(infer_dir, infer_img):
 
 
 def main():
+
+
     cfg = load_config(FLAGS.config)
 
     merge_config(FLAGS.opt)
@@ -124,7 +129,11 @@ def main():
 
     exe.run(startup_prog)
     if cfg.weights:
+        print(cfg.weights)
         checkpoint.load_params(exe, infer_prog, cfg.weights)
+
+    total_params = slim.analysis.model_size(infer_prog)
+    print('Total parameters: {}'.format(total_params))
 
     # parse infer fetches
     assert cfg.metric in ['COCO', 'VOC', 'OID', 'WIDERFACE'], \
@@ -168,6 +177,7 @@ def main():
         vdl_image_frame = 0  # each frame can display ten pictures at most.
 
     imid2path = dataset.get_imid2path()
+    tlist = [ i.strip() for i in open(FLAGS.tfile).readlines()]
     for iter_id, data in enumerate(loader()):
         outs = exe.run(infer_prog,
                        feed=data,
@@ -197,10 +207,17 @@ def main():
         if 'landmark' in res:
             lmk_results = lmk2out([res], is_bbox_normalized)
 
+        #print('guoq+++: ', bbox_results, res)
         # visualize result
         im_ids = res['im_id'][0]
+        #for k, im_id in enumerate(im_ids):
         for im_id in im_ids:
             image_path = imid2path[int(im_id)]
+            bname = tlist[int(os.path.basename(image_path).split('.')[0])]
+            print(image_path, bname)
+            #if bname not in tlist: continue
+            #bname = tlist[k]
+            #image_path = os.path.join(FLAGS.infer_dir, bname) + '.jpg'
             image = Image.open(image_path).convert('RGB')
 
             # use VisualDL to log original image
@@ -211,7 +228,7 @@ def main():
                     original_image_np, vdl_image_step)
 
             image = visualize_results(image,
-                                      int(im_id), catid2name,
+                                      int(im_id), catid2name, bname,
                                       FLAGS.draw_threshold, bbox_results,
                                       mask_results, lmk_results)
 
@@ -238,6 +255,11 @@ if __name__ == '__main__':
         default=None,
         help="Directory for images to perform inference on.")
     parser.add_argument(
+        "--tfile",
+        type=str,
+        default=None,
+        help="test.txt file.")
+    parser.add_argument(
         "--infer_img",
         type=str,
         default=None,
@@ -250,7 +272,7 @@ if __name__ == '__main__':
     parser.add_argument(
         "--draw_threshold",
         type=float,
-        default=0.5,
+        default=0.25,
         help="Threshold to reserve the result for visualization.")
     parser.add_argument(
         "--use_vdl",

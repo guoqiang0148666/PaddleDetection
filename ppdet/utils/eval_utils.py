@@ -54,7 +54,7 @@ def parse_fetches(fetches, prog=None, extra_keys=None):
                 values.append(v.name)
             except Exception:
                 pass
-
+    print('key {} values {} cls {}'.format(keys, values, cls))
     return keys, values, cls
 
 

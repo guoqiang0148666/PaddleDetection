@@ -24,10 +24,11 @@ from .colormap import colormap
 
 __all__ = ['visualize_results']
 
+fout = open('det_scr_box.txt', 'a')
 
 def visualize_results(image,
                       im_id,
-                      catid2name,
+                      catid2name, bname,
                       threshold=0.5,
                       bbox_results=None,
                       mask_results=None,
@@ -38,7 +39,7 @@ def visualize_results(image,
     if mask_results:
         image = draw_mask(image, im_id, mask_results, threshold)
     if bbox_results:
-        image = draw_bbox(image, im_id, catid2name, bbox_results, threshold)
+        image = draw_bbox(image, im_id, catid2name, bname, bbox_results, threshold)
     if lmk_results:
         image = draw_lmk(image, im_id, lmk_results, threshold)
     return image
@@ -70,7 +71,7 @@ def draw_mask(image, im_id, segms, threshold, alpha=0.7):
     return Image.fromarray(img_array.astype('uint8'))
 
 
-def draw_bbox(image, im_id, catid2name, bboxes, threshold):
+def draw_bbox(image, im_id, catid2name, bname, bboxes, threshold):
     """
     Draw bbox on image
     """
@@ -82,12 +83,16 @@ def draw_bbox(image, im_id, catid2name, bboxes, threshold):
         if im_id != dt['image_id']:
             continue
         catid, bbox, score = dt['category_id'], dt['bbox'], dt['score']
+        #if score < threshold or catid2name[catid] != 'aeroplane':
         if score < threshold:
+            #print('{} {} {}'.format(bname, score, catid2name[catid]))
             continue
 
         xmin, ymin, w, h = bbox
         xmax = xmin + w
         ymax = ymin + h
+
+        print('{} {} {} {} {} {}'.format(bname, score, xmin, ymin, xmax, ymax), file=fout)
 
         if catid not in catid2color:
             idx = np.random.randint(len(color_list))

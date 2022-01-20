@@ -32,6 +32,8 @@ from ppdet.data.reader import create_reader
 
 from ppdet.core.workspace import load_config, merge_config, create
 from ppdet.utils.cli import ArgsParser
+import paddle
+paddle.enable_static()
 
 import logging
 FORMAT = '%(asctime)s-%(levelname)s: %(message)s'
